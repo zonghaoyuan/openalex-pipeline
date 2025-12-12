@@ -12,6 +12,7 @@ import sqlite3
 import hashlib
 import logging
 import json
+import glob
 from pathlib import Path
 from datetime import datetime, timezone
 from typing import List, Dict, Tuple
