@@ -10,14 +10,14 @@ Production-grade OpenAlex data pipeline for syncing, transforming, and serving a
 
 ## 📋 Table of Contents
 
-- [Features](#features)
-- [System Architecture](#system-architecture)
-- [Quick Start](#quick-start)
-- [Usage Guide](#usage-guide)
-- [Configuration](#configuration)
-- [Monitoring & Maintenance](#monitoring--maintenance)
-- [Troubleshooting](#troubleshooting)
-- [Contributing](#contributing)
+- [Features](#-features)
+- [System Architecture](#-system-architecture)
+- [Quick Start](#-quick-start)
+- [Usage Guide](#-usage-guide)
+- [Configuration](#-configuration)
+- [Monitoring & Maintenance](#-monitoring--maintenance)
+- [Troubleshooting](#-troubleshooting)
+- [Contributing](#-contributing)
 
 ## ✨ Features
 
