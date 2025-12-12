@@ -145,7 +145,7 @@ Parquet 数据：
 
 --
 此邮件由 OpenAlex 数据管道自动发送
-openalex@yzh.im
+${SENDER_EMAIL}
 EOF
 }
 
@@ -223,7 +223,7 @@ ${LAST_ERRORS}
 
 --
 此邮件由 OpenAlex 数据管道自动发送
-openalex@yzh.im
+${SENDER_EMAIL}
 EOF
 }
 

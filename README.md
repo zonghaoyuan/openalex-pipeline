@@ -1,5 +1,7 @@
 # OpenAlex 数据管道
 
+[English](README.en.md) | 简体中文
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![DuckDB](https://img.shields.io/badge/DuckDB-1.4.3-orange.svg)](https://duckdb.org/)
@@ -87,7 +89,7 @@
 
 1. **克隆仓库**
 ```bash
-cd /home/ubuntu
+cd ~
 git clone <repository-url> openalex
 cd openalex
 ```
@@ -132,7 +134,7 @@ nano config/email_config.sh
 crontab -e
 
 # 添加以下行（每天凌晨 2:00 中国时间）
-0 18 * * * cd /home/ubuntu/openalex && ./run.sh >> ./logs/cron.log 2>&1
+0 18 * * * cd ~/openalex && ./run.sh >> ./logs/cron.log 2>&1
 ```
 
 ## 📖 使用指南
@@ -141,7 +143,7 @@ crontab -e
 
 #### 使用 Screen（推荐，避免 SSH 断开）
 ```bash
-cd /home/ubuntu/openalex
+cd ~/openalex
 
 # 启动 ETL
 ./run_etl_in_screen.sh
@@ -158,7 +160,7 @@ screen -ls
 
 #### 直接运行
 ```bash
-cd /home/ubuntu/openalex
+cd ~/openalex
 ./run.sh
 ```
 
@@ -201,7 +203,7 @@ du -sh data/parquet
 
 1. **启动 Metabase**
 ```bash
-cd /home/ubuntu/openalex
+cd ~/openalex
 docker-compose -f config/docker-compose.yml up -d
 ```
 
@@ -235,7 +237,7 @@ LIMIT 20;
 ### 目录结构
 
 ```
-/home/ubuntu/openalex/
+~/openalex/
 ├── run.sh                          # 快速启动脚本
 ├── run_etl_in_screen.sh            # Screen 启动脚本
 ├── README.md                       # 项目文档
@@ -294,8 +296,8 @@ numpy>=2.3.5
 
 #### 2. 邮件配置 (`config/email_config.sh`)
 ```bash
-RECIPIENT_EMAIL="admin@yzh.im"
-SENDER_EMAIL="openalex@yzh.im"
+RECIPIENT_EMAIL="your-email@example.com"
+SENDER_EMAIL="pipeline@example.com"
 NOTIFY_ON_UPDATE=true
 NOTIFY_ON_FAILURE=true
 ```
@@ -303,11 +305,11 @@ NOTIFY_ON_FAILURE=true
 #### 3. SMTP 配置 (`~/.msmtprc`)
 ```
 account openalex
-host eu1.workspace.org
+host smtp.example.com
 port 587
-user openalex@yzh.im
+user pipeline@example.com
 password YOUR_PASSWORD
-from openalex@yzh.im
+from pipeline@example.com
 ```
 
 ## 🔧 监控与维护
@@ -329,7 +331,7 @@ from openalex@yzh.im
 python3 scripts/check_data_integrity.py
 
 # 检查磁盘空间
-df -h /home/ubuntu/openalex
+df -h ~/openalex
 
 # 检查 Cron 状态
 crontab -l
@@ -408,7 +410,7 @@ sudo systemctl status cron
 sudo tail -f /var/log/syslog | grep CRON
 
 # 手动测试 cron 命令
-cd /home/ubuntu/openalex && ./run.sh
+cd ~/openalex && ./run.sh
 ```
 
 #### 4. 邮件发送失败
@@ -421,7 +423,7 @@ cd /home/ubuntu/openalex && ./run.sh
 cat ~/.msmtprc
 
 # 测试邮件发送
-echo "Test" | mail -s "Test Subject" admin@yzh.im
+echo "Test" | mail -s "Test Subject" your-email@example.com
 
 # 查看日志
 tail -20 logs/msmtp.log
@@ -460,7 +462,7 @@ cp state/etl_state.db state/etl_state.db.backup
 
 4. **限制文件权限**:
 ```bash
-chmod 700 /home/ubuntu/openalex
+chmod 700 ~/openalex
 ```
 
 ## 📊 数据说明
@@ -523,7 +525,7 @@ MIT License - 详见 [LICENSE](LICENSE) 文件
 
 ## 👥 作者
 
-- **Senior Data Engineer** - 初始开发
+- **[Zonghao Yuan](https://yzh.im)** - 项目开发与维护
 
 ## 🙏 致谢
 
@@ -546,4 +548,4 @@ MIT License - 详见 [LICENSE](LICENSE) 文件
 - 足够的系统资源（64GB RAM）
 - 定期监控和维护
 
-**🚀 现在开始**: `cd /home/ubuntu/openalex && ./run_etl_in_screen.sh`
+**🚀 现在开始**: `cd ~/openalex && ./run_etl_in_screen.sh`

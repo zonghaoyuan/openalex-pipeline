@@ -34,7 +34,7 @@ metabase/
 # msmtp configuration (contains password)
 .msmtprc
 
-# Email configuration (may contain sensitive info)
+# Email configuration (contains personal email addresses)
 config/email_config.sh
 
 # ============================================================================

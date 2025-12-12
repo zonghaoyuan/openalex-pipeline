@@ -1,0 +1,61 @@
+# msmtp configuration example for OpenAlex Data Pipeline
+#
+# Setup Instructions:
+#   1. Copy this file to ~/.msmtprc:
+#      cp .msmtprc.example ~/.msmtprc
+#   2. Update the values below with your SMTP settings
+#   3. Set restrictive permissions:
+#      chmod 600 ~/.msmtprc
+#
+# IMPORTANT: Replace all placeholder values with your actual SMTP credentials
+# - YOUR_SMTP_HOST: Your SMTP server address (e.g., smtp.gmail.com, smtp.office365.com)
+# - YOUR_EMAIL: Your email address
+# - YOUR_PASSWORD: Your SMTP password or app-specific password
+
+# Default settings for all accounts
+defaults
+auth           on
+tls            on
+tls_starttls   on
+tls_trust_file /etc/ssl/certs/ca-certificates.crt
+logfile        ~/openalex/logs/msmtp.log
+
+# OpenAlex notification account
+account        openalex
+host           YOUR_SMTP_HOST                 # Example: smtp.gmail.com, eu1.workspace.org
+port           587                            # Common ports: 587 (TLS), 465 (SSL), 25 (plain)
+from           YOUR_EMAIL                     # Example: pipeline@example.com
+user           YOUR_EMAIL                     # Usually same as 'from' address
+password       YOUR_PASSWORD                  # SMTP password or app-specific password
+
+# Set default account
+account default : openalex
+
+# ============================================================================
+# Common SMTP Providers Configuration Examples
+# ============================================================================
+#
+# Gmail:
+#   host: smtp.gmail.com
+#   port: 587
+#   user: your-email@gmail.com
+#   password: your-app-specific-password (not your Gmail password!)
+#   Note: Enable 2FA and create an app-specific password
+#
+# Office 365 / Outlook:
+#   host: smtp.office365.com
+#   port: 587
+#   user: your-email@outlook.com
+#   password: your-password
+#
+# Namecheap Private Email:
+#   host: mail.privateemail.com (or your region's server)
+#   port: 587
+#   user: your-email@yourdomain.com
+#   password: your-password
+#
+# Custom SMTP:
+#   host: your-smtp-server.com
+#   port: 587 (or 465 for SSL)
+#   user: your-username
+#   password: your-password

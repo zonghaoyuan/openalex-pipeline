@@ -1,0 +1,34 @@
+# Email Notification Configuration Example
+# This file contains email settings for OpenAlex data pipeline notifications
+#
+# Configuration Priority (highest to lowest):
+#   1. Environment variables (OPENALEX_RECIPIENT_EMAIL, OPENALEX_SENDER_EMAIL)
+#   2. This configuration file
+#   3. Default placeholder values
+#
+# Setup Instructions:
+#   1. Copy this file to email_config.sh:
+#      cp config/email_config.sh.example config/email_config.sh
+#   2. Update the values below with your email addresses
+#   3. Configure SMTP settings in ~/.msmtprc (see .msmtprc.example)
+#
+# Alternative: Use Environment Variables
+#   export OPENALEX_RECIPIENT_EMAIL="your-email@example.com"
+#   export OPENALEX_SENDER_EMAIL="sender@example.com"
+#   export OPENALEX_SENDER_NAME="Your Pipeline Name"
+
+# Recipient email address (who receives notifications)
+RECIPIENT_EMAIL="${OPENALEX_RECIPIENT_EMAIL:-your-email@example.com}"
+
+# Email sender details (must match SMTP account configured in ~/.msmtprc)
+SENDER_EMAIL="${OPENALEX_SENDER_EMAIL:-pipeline@example.com}"
+SENDER_NAME="${OPENALEX_SENDER_NAME:-OpenAlex Data Pipeline}"
+
+# Notification settings
+# Send notification only when files are updated
+NOTIFY_ON_UPDATE=true
+NOTIFY_ON_FAILURE=true
+NOTIFY_ON_NO_UPDATE=false
+
+# Weekly summary (disabled by default)
+SEND_WEEKLY_SUMMARY=false
