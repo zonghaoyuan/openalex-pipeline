@@ -1,0 +1,120 @@
+version: '3.8'
+
+###############################################################################
+# OpenAlex Data Pipeline - Metabase Service
+# Purpose: Serve Parquet data via Metabase with DuckDB
+# Author: Senior Data Engineer
+# Date: 2025-12-12
+###############################################################################
+
+services:
+  metabase:
+    image: metabase/metabase:latest
+    container_name: openalex-metabase
+    hostname: metabase
+
+    # Port mapping: Access Metabase at http://localhost:3000
+    ports:
+      - "3000:3000"
+
+    # Volume mounts
+    volumes:
+      # Parquet data (READ-ONLY) - This is your query source
+      - ../data/parquet:/data:ro
+
+      # Metabase plugins directory (for DuckDB driver)
+      - ../metabase/plugins:/plugins
+
+      # Metabase application data (persistent storage)
+      - metabase_data:/metabase-data
+
+    # Environment variables
+    environment:
+      # Java heap size - adjust based on your RAM availability
+      - MB_JAVA_OPTS=-Xmx2g -Xms512m
+
+      # Metabase database (internal metadata storage)
+      - MB_DB_TYPE=h2
+      - MB_DB_FILE=/metabase-data/metabase.db
+
+      # Plugin directory for DuckDB driver
+      - MB_PLUGINS_DIR=/plugins
+
+      # Logging
+      - MB_LOG_LEVEL=INFO
+
+      # Timezone
+      - TZ=UTC
+
+    # Resource limits (adjust based on your system)
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+        reservations:
+          memory: 1G
+          cpus: '1.0'
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+    # Restart policy
+    restart: unless-stopped
+
+    # Network
+    networks:
+      - openalex-network
+
+# Named volumes
+volumes:
+  metabase_data:
+    driver: local
+
+# Network definition
+networks:
+  openalex-network:
+    driver: bridge
+
+###############################################################################
+# SETUP INSTRUCTIONS
+###############################################################################
+#
+# 1. Download DuckDB plugin for Metabase:
+#    mkdir -p ./metabase_plugins
+#    wget https://github.com/AlexR2D2/metabase_duckdb_driver/releases/download/0.2.8/duckdb.metabase-driver.jar \
+#         -O ./metabase_plugins/duckdb.metabase-driver.jar
+#
+# 2. Start Metabase:
+#    docker-compose up -d
+#
+# 3. Access Metabase:
+#    Open http://localhost:3000 in your browser
+#
+# 4. Initial setup:
+#    - Create an admin account
+#    - Choose "I'll add my own data later"
+#    - Go to Admin > Databases > Add Database
+#
+# 5. Configure DuckDB connection:
+#    - Database type: DuckDB
+#    - Name: OpenAlex
+#    - Database file: /data/openalex.duckdb (or :memory: for in-memory)
+#    - Options: Can add initialization SQL from init_duckdb.sql
+#
+# 6. Connect to data:
+#    - The views from init_duckdb.sql will be available as tables
+#    - You can now create queries, dashboards, and visualizations
+#
+# 7. Managing the service:
+#    - View logs: docker-compose logs -f metabase
+#    - Stop: docker-compose down
+#    - Restart: docker-compose restart
+#    - Update: docker-compose pull && docker-compose up -d
+#
+###############################################################################

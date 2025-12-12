@@ -1,0 +1,116 @@
+# ============================================================================
+# OpenAlex Data Pipeline - Git Ignore Configuration
+# Purpose: Exclude data files, logs, and sensitive information from Git
+# ============================================================================
+
+# ============================================================================
+# Data Directories (Large files - DO NOT commit to Git)
+# ============================================================================
+data/
+!data/.gitkeep
+
+# ============================================================================
+# State Database (Contains processing history)
+# ============================================================================
+state/
+!state/.gitkeep
+
+# ============================================================================
+# Log Files (Generated during execution)
+# ============================================================================
+logs/
+!logs/.gitkeep
+*.log
+
+# ============================================================================
+# Metabase Data (Docker volumes and plugins)
+# ============================================================================
+metabase/
+!metabase/.gitkeep
+
+# ============================================================================
+# Sensitive Configuration Files
+# ============================================================================
+# msmtp configuration (contains password)
+.msmtprc
+
+# Email configuration (may contain sensitive info)
+config/email_config.sh
+
+# ============================================================================
+# Python
+# ============================================================================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# Python cache
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ============================================================================
+# OS-specific
+# ============================================================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+.directory
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ============================================================================
+# IDE / Editor
+# ============================================================================
+# VSCode
+.vscode/
+*.code-workspace
+
+# PyCharm
+.idea/
+*.iml
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# ============================================================================
+# Temporary Files
+# ============================================================================
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+
+# ============================================================================
+# Git keep files for empty directories
+# ============================================================================
+# We want to track certain directory structures but not their contents
+# Add .gitkeep files to maintain directory structure

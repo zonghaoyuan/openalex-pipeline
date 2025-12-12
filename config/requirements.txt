@@ -1,0 +1,9 @@
+# OpenAlex Data Pipeline - Python Dependencies
+# Install with: pip3 install -r requirements.txt
+
+# Core ETL dependency
+duckdb>=0.9.0
+
+# Optional but recommended
+pandas>=2.0.0        # For data analysis
+pyarrow>=14.0.0      # Better Parquet performance
