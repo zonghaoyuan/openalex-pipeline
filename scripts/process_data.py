@@ -2,8 +2,10 @@
 """
 OpenAlex Smart ETL Converter
 Purpose: Incrementally convert JSONL.gz files to Parquet format with state tracking
+         and schema normalization to ensure consistent types across all partitions
 Author: Senior Data Engineer
 Date: 2025-12-12
+Updated: 2025-12-13 - Added schema normalization support
 """
 
 import os
@@ -15,7 +17,7 @@ import json
 import glob
 from pathlib import Path
 from datetime import datetime, timezone
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 import duckdb
 
 ###############################################################################
@@ -32,6 +34,7 @@ CONFIG = {
     "state_db": str(PROJECT_ROOT / "state" / "etl_state.db"),
     "error_log": str(PROJECT_ROOT / "logs" / "etl_errors.log"),
     "process_log": str(PROJECT_ROOT / "logs" / "etl_process.log"),
+    "schema_config": str(PROJECT_ROOT / "config" / "schema_normalization.json"),
     "entity_types": [
         "authors",
         "concepts",
@@ -67,6 +70,74 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 ###############################################################################
+# Schema Normalization
+###############################################################################
+
+
+class SchemaNormalizer:
+    """Handles schema normalization based on configuration."""
+
+    def __init__(self, config_path: str):
+        self.config_path = config_path
+        self.rules = {}
+        self._load_config()
+
+    def _load_config(self):
+        """Load schema normalization configuration."""
+        if os.path.exists(self.config_path):
+            with open(self.config_path, "r") as f:
+                self.rules = json.load(f)
+            logger.info(f"Loaded schema normalization config from {self.config_path}")
+        else:
+            logger.warning(f"Schema config not found at {self.config_path}, using defaults")
+            self.rules = {}
+
+    def get_normalization_rules(self, entity_type: str) -> Dict:
+        """Get normalization rules for an entity type."""
+        return self.rules.get(entity_type, {
+            "columns_to_varchar": [],
+            "struct_columns_to_json": []
+        })
+
+    def needs_normalization(self, entity_type: str) -> bool:
+        """Check if an entity type needs schema normalization."""
+        rules = self.get_normalization_rules(entity_type)
+        return bool(rules.get("columns_to_varchar") or rules.get("struct_columns_to_json"))
+
+    def build_select_clause(self, entity_type: str, columns: List[str]) -> str:
+        """
+        Build SELECT clause with CAST expressions for normalization.
+
+        Args:
+            entity_type: The entity type (e.g., 'works', 'authors')
+            columns: List of column names from the source file
+
+        Returns:
+            SELECT clause string
+        """
+        rules = self.get_normalization_rules(entity_type)
+        cols_to_varchar = set(rules.get("columns_to_varchar", []))
+        cols_to_json = set(rules.get("struct_columns_to_json", []))
+
+        select_parts = []
+        for col in columns:
+            # Escape column names that might be reserved words
+            escaped_col = f'"{col}"' if col in ['type', 'year', 'source', 'domain', 'version'] else col
+
+            if col in cols_to_varchar:
+                # Convert to VARCHAR (JSON string)
+                select_parts.append(f'CAST({escaped_col} AS VARCHAR) AS "{col}"')
+            elif col in cols_to_json:
+                # Convert struct to JSON string
+                select_parts.append(f'to_json({escaped_col})::VARCHAR AS "{col}"')
+            else:
+                # Keep as-is
+                select_parts.append(f'{escaped_col} AS "{col}"')
+
+        return ", ".join(select_parts)
+
+
+###############################################################################
 # State Management
 ###############################################################################
 
@@ -80,6 +151,7 @@ class StateManager:
 
     def _init_database(self):
         """Initialize the state database with necessary tables."""
+        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
         with sqlite3.connect(self.db_path) as conn:
             conn.execute(
                 """
@@ -201,6 +273,14 @@ class StateManager:
 
         return {"processed": processed_stats, "failed": failed_stats}
 
+    def clear_entity(self, entity_type: str):
+        """Clear all records for a specific entity type."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("DELETE FROM processed_files WHERE entity_type = ?", (entity_type,))
+            conn.execute("DELETE FROM failed_files WHERE entity_type = ?", (entity_type,))
+            conn.commit()
+        logger.info(f"Cleared state for entity: {entity_type}")
+
 
 ###############################################################################
 # File Processing
@@ -230,11 +310,32 @@ def discover_files(source_dir: str, entity_types: List[str]) -> Dict[str, List[s
     return files_by_entity
 
 
+def get_columns_from_json(con: duckdb.DuckDBPyConnection, source_file: str) -> List[str]:
+    """Get column names from a JSON file."""
+    try:
+        query = f"""
+            DESCRIBE SELECT * FROM read_json_auto(
+                '{source_file}',
+                maximum_object_size=100000000,
+                ignore_errors=true,
+                sample_size=100
+            )
+        """
+        result = con.execute(query).fetchall()
+        return [row[0] for row in result]
+    except Exception as e:
+        logger.warning(f"Could not get columns from {source_file}: {e}")
+        return []
+
+
 def convert_to_parquet(
-    source_file: str, output_file: str, entity_type: str
+    source_file: str,
+    output_file: str,
+    entity_type: str,
+    normalizer: SchemaNormalizer
 ) -> Tuple[bool, int, str]:
     """
-    Convert a JSONL.gz file to Parquet using DuckDB.
+    Convert a JSONL.gz file to Parquet using DuckDB with schema normalization.
 
     Returns: (success, record_count, error_message)
     """
@@ -245,18 +346,51 @@ def convert_to_parquet(
         # Initialize DuckDB connection
         con = duckdb.connect(":memory:")
 
-        # Read JSONL.gz and write to Parquet
-        # DuckDB automatically handles gzipped files
-        query = f"""
-            COPY (
-                SELECT * FROM read_json_auto(
-                    '{source_file}',
-                    maximum_object_size=100000000,
-                    ignore_errors=false,
-                    union_by_name=true
-                )
-            ) TO '{output_file}' (FORMAT PARQUET, COMPRESSION ZSTD);
-        """
+        # Check if normalization is needed
+        if normalizer.needs_normalization(entity_type):
+            # Get columns from the source file
+            columns = get_columns_from_json(con, source_file)
+
+            if not columns:
+                # Fallback: read without normalization if column detection fails
+                logger.warning(f"Column detection failed for {source_file}, using default conversion")
+                query = f"""
+                    COPY (
+                        SELECT * FROM read_json_auto(
+                            '{source_file}',
+                            maximum_object_size=100000000,
+                            ignore_errors=true,
+                            union_by_name=true
+                        )
+                    ) TO '{output_file}' (FORMAT PARQUET, COMPRESSION ZSTD);
+                """
+            else:
+                # Build normalized SELECT clause
+                select_clause = normalizer.build_select_clause(entity_type, columns)
+
+                query = f"""
+                    COPY (
+                        SELECT {select_clause}
+                        FROM read_json_auto(
+                            '{source_file}',
+                            maximum_object_size=100000000,
+                            ignore_errors=true,
+                            union_by_name=true
+                        )
+                    ) TO '{output_file}' (FORMAT PARQUET, COMPRESSION ZSTD);
+                """
+        else:
+            # No normalization needed - use simple conversion
+            query = f"""
+                COPY (
+                    SELECT * FROM read_json_auto(
+                        '{source_file}',
+                        maximum_object_size=100000000,
+                        ignore_errors=false,
+                        union_by_name=true
+                    )
+                ) TO '{output_file}' (FORMAT PARQUET, COMPRESSION ZSTD);
+            """
 
         con.execute(query)
 
@@ -280,6 +414,7 @@ def convert_to_parquet(
         logger.error(error_msg)
 
         # Log to error file
+        os.makedirs(os.path.dirname(CONFIG["error_log"]), exist_ok=True)
         with open(CONFIG["error_log"], "a") as f:
             f.write(f"{datetime.now().isoformat()} | {error_msg}\n")
 
@@ -361,7 +496,10 @@ def cleanup_orphan_parquets(
 
 
 def process_entity(
-    entity_type: str, files: List[str], state_mgr: StateManager
+    entity_type: str,
+    files: List[str],
+    state_mgr: StateManager,
+    normalizer: SchemaNormalizer
 ) -> Dict:
     """Process all files for a specific entity type."""
     stats = {
@@ -372,8 +510,11 @@ def process_entity(
         "failed": 0,
     }
 
+    needs_norm = normalizer.needs_normalization(entity_type)
+    norm_status = "WITH schema normalization" if needs_norm else "no normalization needed"
+
     logger.info(f"\n{'='*60}")
-    logger.info(f"Processing entity: {entity_type.upper()}")
+    logger.info(f"Processing entity: {entity_type.upper()} ({norm_status})")
     logger.info(f"{'='*60}")
 
     for idx, source_file in enumerate(files, 1):
@@ -399,7 +540,7 @@ def process_entity(
 
         # Convert to Parquet
         success, record_count, error_msg = convert_to_parquet(
-            source_file, output_file, entity_type
+            source_file, output_file, entity_type, normalizer
         )
 
         if success:
@@ -427,8 +568,20 @@ def main():
 
     start_time = datetime.now()
 
-    # Initialize state manager
+    # Initialize state manager and schema normalizer
+    os.makedirs(os.path.dirname(CONFIG["state_db"]), exist_ok=True)
     state_mgr = StateManager(CONFIG["state_db"])
+    normalizer = SchemaNormalizer(CONFIG["schema_config"])
+
+    # Log normalization status
+    logger.info("\nSchema Normalization Status:")
+    for entity in CONFIG["entity_types"]:
+        if normalizer.needs_normalization(entity):
+            rules = normalizer.get_normalization_rules(entity)
+            num_cols = len(rules.get("columns_to_varchar", [])) + len(rules.get("struct_columns_to_json", []))
+            logger.info(f"  {entity}: {num_cols} columns will be normalized to VARCHAR")
+        else:
+            logger.info(f"  {entity}: no normalization needed")
 
     # Discover files
     logger.info(f"\nScanning source directory: {CONFIG['source_dir']}")
@@ -451,7 +604,7 @@ def main():
             logger.info(f"Skipping {entity_type}: No files found")
             continue
 
-        entity_stats = process_entity(entity_type, files, state_mgr)
+        entity_stats = process_entity(entity_type, files, state_mgr, normalizer)
 
         overall_stats["new_files"] += entity_stats["new"]
         overall_stats["processed"] += entity_stats["processed"]

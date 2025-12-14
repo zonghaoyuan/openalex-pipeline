@@ -204,33 +204,41 @@ du -sh data/parquet
 1. **启动 Metabase**
 ```bash
 cd ~/openalex
-docker-compose -f config/docker-compose.yml up -d
+sudo docker compose -f config/docker-compose.yml up -d
 ```
 
 2. **访问界面**
-- URL: `http://localhost:3000`
-- 首次访问需要设置管理员账户
+- 直接访问: `http://SERVER_IP:3000`
+- 通过反向代理: 配置1Panel等，后端 `http://localhost:3000`
 
 3. **配置数据源**
-- 数据库类型: DuckDB
-- 数据库文件: `/data/parquet` (容器内路径)
-- 运行 SQL: 执行 `config/init_duckdb.sql` 中的视图创建语句
+- 数据库类型: **DuckDB**
+- 数据库文件: `/duckdb/openalex.duckdb`
 
-4. **查询示例**
+4. **重要提示**
+⚠️ 不要直接点击大表（works、authors），会超时！请使用SQL查询。
+
+5. **推荐查询示例**
 ```sql
--- 查询 2024 年发表的论文
-SELECT * FROM works WHERE publication_year = 2024 LIMIT 100;
+-- 查询小表（测试连接）
+SELECT * FROM read_parquet('/data/domains/**/*.parquet');
 
--- 查询高被引作者
-SELECT * FROM authors WHERE cited_by_count > 1000 ORDER BY cited_by_count DESC;
-
--- 统计各机构论文数量
-SELECT institution_id, COUNT(*) as paper_count
-FROM works
-GROUP BY institution_id
-ORDER BY paper_count DESC
-LIMIT 20;
+-- 按年份统计论文（优化版）
+SELECT
+    publication_year,
+    COUNT(*) as paper_count
+FROM read_parquet('/data/works/**/*.parquet',
+                   union_by_name=true,
+                   hive_partitioning=true,
+                   columns=['id', 'publication_year'])
+WHERE publication_year >= 2020
+GROUP BY publication_year
+ORDER BY publication_year DESC;
 ```
+
+6. **详细文档**
+- 📖 [METABASE_SETUP.md](METABASE_SETUP.md) - 完整使用指南
+- 📋 [docs/CONFIGURATION_CHECKLIST.md](docs/CONFIGURATION_CHECKLIST.md) - 配置清单
 
 ## ⚙️ 配置说明
 

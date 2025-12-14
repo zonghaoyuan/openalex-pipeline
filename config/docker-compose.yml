@@ -1,5 +1,3 @@
-version: '3.8'
-
 ###############################################################################
 # OpenAlex Data Pipeline - Metabase Service
 # Purpose: Serve Parquet data via Metabase with DuckDB
@@ -9,19 +7,25 @@ version: '3.8'
 
 services:
   metabase:
-    image: metabase/metabase:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.metabase
+    image: openalex-metabase:custom
     container_name: openalex-metabase
     hostname: metabase
 
-    # No external port mapping - use reverse proxy (OnePanel) to access
-    # Container internally listens on port 3000
-    expose:
-      - "3000"
+    # Port mapping - accessible on all interfaces for reverse proxy
+    # Access via 1Panel reverse proxy or http://SERVER_IP:3000
+    ports:
+      - "3000:3000"
 
     # Volume mounts
     volumes:
       # Parquet data (READ-ONLY) - This is your query source
       - ../data/parquet:/data:ro
+
+      # DuckDB directory (database will be created inside)
+      - ../data:/duckdb:rw
 
       # Metabase plugins directory (for DuckDB driver)
       - ../metabase/plugins:/plugins
@@ -47,15 +51,16 @@ services:
       # Timezone
       - TZ=UTC
 
-    # Resource limits (adjust based on your system)
+    # Resource limits (专用服务器：64GB RAM)
+    # 容器限制56GB（48GB堆 + 8GB堆外/DuckDB缓冲区），系统预留6GB
     deploy:
       resources:
         limits:
-          memory: 4G
-          cpus: '2.0'
+          memory: 56G
+          cpus: '8.0'
         reservations:
-          memory: 1G
-          cpus: '1.0'
+          memory: 8G
+          cpus: '4.0'
 
     # Health check
     healthcheck:

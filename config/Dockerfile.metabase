@@ -1,0 +1,30 @@
+# Use Debian-based OpenJDK as base instead of Alpine
+FROM eclipse-temurin:11-jre
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    fontconfig \
+    && rm -rf /var/lib/apt/lists/*
+
+# Download and install Metabase
+ENV MB_VERSION=v0.51.5
+RUN mkdir -p /app && \
+    curl -L "https://downloads.metabase.com/${MB_VERSION}/metabase.jar" -o /app/metabase.jar
+
+# Set working directory
+WORKDIR /app
+
+# Copy initialization script and SQL files
+COPY init-duckdb.sh /app/init-duckdb.sh
+COPY create_views.sql /app/create_views.sql
+RUN chmod +x /app/init-duckdb.sh
+
+# Expose Metabase port
+EXPOSE 3000
+
+# Run as root (to avoid permission issues)
+USER root
+
+# Use initialization script as entrypoint
+CMD ["/app/init-duckdb.sh"]

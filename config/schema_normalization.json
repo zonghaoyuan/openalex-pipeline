@@ -1,0 +1,137 @@
+{
+  "_comment": "Schema normalization rules for OpenAlex ETL - columns to convert to VARCHAR/JSON string",
+  "_strategy": "Convert all conflicting columns to VARCHAR (JSON string format) for maximum compatibility",
+  "_last_updated": "2025-12-13",
+
+  "authors": {
+    "_conflicts": 8,
+    "_description": "Author entities - 115M+ records",
+    "columns_to_varchar": [
+      "orcid",
+      "affiliations",
+      "last_known_institutions",
+      "topics",
+      "topic_share",
+      "x_concepts",
+      "counts_by_year"
+    ],
+    "struct_columns_to_json": [
+      "ids"
+    ]
+  },
+
+  "institutions": {
+    "_conflicts": 8,
+    "_description": "Institution entities - ~100K records",
+    "columns_to_varchar": [
+      "image_url",
+      "image_thumbnail_url",
+      "wikidata_id",
+      "display_name_acronyms",
+      "display_name_alternatives",
+      "repositories",
+      "associated_institutions"
+    ],
+    "struct_columns_to_json": [
+      "ids"
+    ]
+  },
+
+  "sources": {
+    "_conflicts": 16,
+    "_description": "Source/Journal entities",
+    "columns_to_varchar": [
+      "issn_l",
+      "issn",
+      "host_organization",
+      "host_organization_name",
+      "host_organization_lineage",
+      "homepage_url",
+      "country_code",
+      "alternate_titles",
+      "apc_prices",
+      "apc_usd",
+      "is_in_doaj_since_year",
+      "is_high_oa_rate_since_year",
+      "oa_flip_year",
+      "topics",
+      "topic_share"
+    ],
+    "struct_columns_to_json": [
+      "ids"
+    ]
+  },
+
+  "works": {
+    "_conflicts": 15,
+    "_description": "Work entities - 463M+ records - most complex schema",
+    "columns_to_varchar": [
+      "authorships",
+      "referenced_works",
+      "counts_by_year",
+      "indexed_in",
+      "biblio",
+      "locations",
+      "primary_location",
+      "best_oa_location",
+      "sustainable_development_goals",
+      "grants",
+      "awards",
+      "funders",
+      "mesh"
+    ],
+    "struct_columns_to_json": [
+      "ids",
+      "open_access"
+    ]
+  },
+
+  "concepts": {
+    "_conflicts": 0,
+    "_description": "No conflicts - no normalization needed",
+    "columns_to_varchar": [],
+    "struct_columns_to_json": []
+  },
+
+  "domains": {
+    "_conflicts": 0,
+    "_description": "No conflicts - no normalization needed",
+    "columns_to_varchar": [],
+    "struct_columns_to_json": []
+  },
+
+  "fields": {
+    "_conflicts": 0,
+    "_description": "No conflicts - no normalization needed",
+    "columns_to_varchar": [],
+    "struct_columns_to_json": []
+  },
+
+  "funders": {
+    "_conflicts": 0,
+    "_description": "No conflicts - no normalization needed",
+    "columns_to_varchar": [],
+    "struct_columns_to_json": []
+  },
+
+  "publishers": {
+    "_conflicts": 0,
+    "_description": "No conflicts - no normalization needed",
+    "columns_to_varchar": [],
+    "struct_columns_to_json": []
+  },
+
+  "subfields": {
+    "_conflicts": 0,
+    "_description": "No conflicts - no normalization needed",
+    "columns_to_varchar": [],
+    "struct_columns_to_json": []
+  },
+
+  "topics": {
+    "_conflicts": 0,
+    "_description": "No conflicts - no normalization needed",
+    "columns_to_varchar": [],
+    "struct_columns_to_json": []
+  }
+}
